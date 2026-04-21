@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OD-to-OD Migration — DB Schema</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:   #134CB7;
+      --navy:   #00096f;
+      --green:  #15803d;
+      --orange: #c05621;
+      --red:    #b91c1c;
+      --grey:   #6b7280;
+      --light:  #f9fafb;
+      --border: #e5e7eb;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f4f4f6;
+      color: #111;
+      line-height: 1.6;
+    }
+
+    /* ── PDF DOWNLOAD BUTTON ── */
+    .pdf-btn {
+      position: fixed;
+      top: 18px; right: 20px;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      padding: 9px 18px 9px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      z-index: 200;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      transition: background 0.15s;
+    }
+    .pdf-btn:hover { background: #0e3d99; }
+    .pdf-btn svg { flex-shrink: 0; }
+
+    /* ── HEADER ── */
+    .doc-header {
+      background: var(--navy); color: #fff;
+      padding: 32px 44px 26px;
+    }
+    .doc-header-eyebrow {
+      font-size: 11px; font-weight: 600; letter-spacing: 1.2px;
+      text-transform: uppercase; color: #93c5fd; margin-bottom: 6px;
+    }
+    .doc-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 5px; }
+    .doc-header-sub { font-size: 13px; color: #bfdbfe; }
+    .doc-header-meta {
+      margin-top: 18px;
+      display: flex; gap: 28px; flex-wrap: wrap;
+      border-top: 1px solid rgba(255,255,255,0.12);
+      padding-top: 14px;
+    }
+    .meta-item { font-size: 12px; color: #93c5fd; }
+    .meta-item strong { color: #fff; display: block; font-size: 13px; font-weight: 600; }
+
+    /* ── LAYOUT ── */
+    .page { max-width: 1020px; margin: 0 auto; padding: 32px 28px 56px; }
+
+    /* ── SECTION ── */
+    .section { margin-bottom: 40px; }
+    .section-title {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.3px;
+      text-transform: uppercase; color: var(--grey);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 7px; margin-bottom: 18px;
+    }
+
+    /* ── SUMMARY CARDS ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .summary-card {
+      background: #fff; border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 16px 18px;
+    }
+    .summary-card-value { font-size: 30px; font-weight: 700; color: var(--navy); line-height: 1; }
+    .summary-card-label { font-size: 12px; color: var(--grey); margin-top: 4px; }
+    .summary-card.blue  .summary-card-value { color: var(--blue); }
+    .summary-card.green .summary-card-value { color: var(--green); }
+    .summary-card.orange .summary-card-value { color: var(--orange); }
+
+    /* ── LEGEND ── */
+    .legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; margin-bottom: 18px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; color: #374151; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* ── ER DIAGRAM ── */
+    .er-wrap {
+      background: #fff; border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 28px 24px; overflow-x: auto;
+    }
+    .er-diagram {
+      display: flex; gap: 0;
+      align-items: flex-start;
+      justify-content: center;
+      min-width: 680px;
+    }
+    .er-table {
+      border: 2px solid var(--border); border-radius: 8px;
+      min-width: 190px; font-size: 12px;
+      overflow: hidden; flex-shrink: 0;
+    }
+    .er-table.new-table      { border-color: var(--blue); }
+    .er-table.existing-table { border-color: #d1d5db; }
+    .er-table-header {
+      padding: 8px 12px; font-weight: 700; font-size: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .er-table.new-table .er-table-header      { background: var(--navy); color: #fff; }
+    .er-table.existing-table .er-table-header { background: #f3f4f6; color: #374151; }
+    .er-badge {
+      font-size: 9px; padding: 2px 6px;
+      border-radius: 8px; font-weight: 600; letter-spacing: 0.3px;
+    }
+    .er-badge.new { background: #bfdbfe; color: var(--navy); }
+    .er-badge.ext { background: #e5e7eb; color: #6b7280; }
+    .er-row {
+      padding: 4px 12px; border-top: 1px solid #f3f4f6;
+      display: flex; gap: 6px; align-items: center; color: #374151;
+    }
+    .er-row.pk  { background: #fffbeb; }
+    .er-row.fk  { background: #eff6ff; }
+    .er-row.idx { background: #f0fdf4; }
+    .er-col-key  { font-size: 9px; font-weight: 700; width: 20px; color: var(--grey); flex-shrink: 0; }
+    .er-col-name { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; flex: 1; }
+    .er-col-type { font-size: 9px; color: var(--grey); white-space: nowrap; }
+
+    /* connector */
+    .er-conn {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 0 6px;
+    }
+    .er-conn-line {
+      width: 34px; height: 2px;
+      background: var(--border); position: relative;
+    }
+    .er-conn-line::after {
+      content: '▶'; position: absolute;
+      right: -7px; top: -5px;
+      color: var(--grey); font-size: 10px;
+    }
+    .er-conn-label {
+      font-size: 9px; color: var(--grey); white-space: nowrap; margin: 3px 0;
+    }
+
+    /* right column: two tables stacked */
+    .er-right-col { display: flex; flex-direction: column; gap: 14px; }
+
+    /* branch connector (two arrows from one source) */
+    .er-branch-conn {
+      display: flex; flex-direction: column;
+      justify-content: space-around; align-items: center;
+      padding: 0 6px; position: relative;
+    }
+    .branch-arm {
+      display: flex; align-items: center; gap: 0;
+      position: relative;
+    }
+    .branch-arm .h-line {
+      width: 30px; height: 2px; background: var(--border); position: relative;
+    }
+    .branch-arm .h-line::after {
+      content: '▶'; position: absolute;
+      right: -7px; top: -5px;
+      color: var(--grey); font-size: 10px;
+    }
+    .branch-v-line {
+      width: 2px; background: var(--border);
+      position: absolute; left: 50%; top: 0; bottom: 0;
+      transform: translateX(-50%);
+    }
+    .branch-lbl { font-size: 9px; color: var(--grey); margin-left: 3px; white-space: nowrap; }
+
+    /* ── TABLE DEFINITIONS ── */
+    .table-def {
+      background: #fff; border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden; margin-bottom: 18px;
+      page-break-inside: avoid;
+    }
+    .table-def-header {
+      padding: 12px 18px;
+      display: flex; align-items: baseline; gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .table-def-header.new      { background: var(--navy); }
+    .table-def-header.existing { background: #f9fafb; }
+    .table-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px; font-weight: 700;
+    }
+    .table-def-header.new .table-name      { color: #fff; }
+    .table-def-header.existing .table-name { color: var(--navy); }
+    .table-desc { font-size: 12px; margin-left: auto; flex-shrink: 0; }
+    .table-def-header.new .table-desc      { color: #bfdbfe; }
+    .table-def-header.existing .table-desc { color: var(--grey); }
+
+    .col-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .col-table thead th {
+      padding: 8px 14px; text-align: left;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.6px;
+      color: var(--grey); background: #f9fafb;
+      border-bottom: 1px solid var(--border);
+    }
+    .col-table tbody td {
+      padding: 9px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: top;
+    }
+    .col-table tbody tr:last-child td { border-bottom: none; }
+    .col-table tbody tr:hover          { background: #fafafa; }
+    .col-table tbody tr.pk-row         { background: #fffbeb; }
+    .col-table tbody tr.fk-row         { background: #eff6ff; }
+    .col-table tbody tr.pk-row:hover,
+    .col-table tbody tr.fk-row:hover   { filter: brightness(0.97); }
+
+    .col-name { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; color: #111; }
+    .col-type { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #6366f1; }
+    .col-notes { font-size: 12px; color: #6b7280; }
+    .col-notes code {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      background: #f3f4f6; padding: 1px 5px; border-radius: 3px; color: #374151;
+    }
+
+    .tag {
+      font-size: 9px; font-weight: 700;
+      padding: 2px 5px; border-radius: 3px;
+      letter-spacing: 0.3px; white-space: nowrap;
+      display: inline-block;
+    }
+    .tag-pk   { background: #fef3c7; color: #92400e; }
+    .tag-fk   { background: #dbeafe; color: #1e40af; }
+    .tag-idx  { background: #dcfce7; color: #15803d; }
+    .tag-nn   { background: #f3f4f6; color: #6b7280; }
+    .tag-null { background: #f9fafb; color: #9ca3af; border: 1px solid #e5e7eb; }
+    .tag-def  { background: #fdf2f8; color: #9d174d; }
+
+    /* ── STATUS PILLS ── */
+    .status-grid {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      font-size: 11px; padding: 10px 0 4px;
+    }
+    .spill {
+      padding: 3px 10px; border-radius: 20px; font-weight: 600; font-size: 11px;
+    }
+    .spill.not-started { background: #f3f4f6; color: #6b7280; }
+    .spill.in-progress { background: #dbeafe; color: #1e40af; }
+    .spill.completed   { background: #dcfce7; color: #15803d; }
+    .spill.partial     { background: #fef3c7; color: #92400e; }
+    .spill.failed      { background: #fee2e2; color: #b91c1c; }
+    .spill.skipped     { background: #f3f4f6; color: #9ca3af; }
+
+    /* ── INDEX BLOCK ── */
+    .index-block {
+      background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px;
+      padding: 12px 16px; margin: 12px 14px 14px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+      page-break-inside: avoid;
+    }
+    .idx-title {
+      font-size: 9px; font-weight: 700; color: var(--green);
+      letter-spacing: 0.6px; text-transform: uppercase;
+      margin-bottom: 6px; font-family: 'Inter', sans-serif;
+    }
+    .index-line { color: #374151; margin-bottom: 3px; line-height: 1.5; }
+    .index-line:last-child { margin-bottom: 0; }
+    .index-line.cmt { color: #9ca3af; font-size: 11px; }
+
+    /* ── ERROR_MESSAGE JSON EXAMPLE ── */
+    .json-example {
+      background: #0f172a; border-radius: 6px;
+      padding: 12px 16px; margin: 8px 14px 14px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+      line-height: 1.7;
+      page-break-inside: avoid;
+    }
+    .j-key   { color: #7dd3fc; }
+    .j-str   { color: #86efac; }
+    .j-num   { color: #fbbf24; }
+    .j-punc  { color: #94a3b8; }
+    .j-cmt   { color: #64748b; font-style: italic; }
+
+    /* ── CONFIG KEYS TABLE ── */
+    .kv-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .kv-table thead th {
+      padding: 8px 14px; text-align: left;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.6px;
+      color: var(--grey); background: #f9fafb;
+      border-bottom: 1px solid var(--border);
+    }
+    .kv-table tbody td { padding: 8px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+    .kv-table tbody tr:last-child td { border-bottom: none; }
+    .kv-key { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #6366f1; }
+    .kv-eg  { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9ca3af; }
+
+    /* ── DDL SQL BLOCK ── */
+    .sql-block {
+      background: #0f172a; border-radius: 8px;
+      padding: 18px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px; line-height: 1.8;
+      overflow-x: auto; margin-bottom: 16px;
+      page-break-inside: avoid;
+    }
+    .sql-kw   { color: #7dd3fc; }
+    .sql-type { color: #a78bfa; }
+    .sql-str  { color: #86efac; }
+    .sql-cmt  { color: #64748b; }
+    .sql-punc { color: #94a3b8; }
+    .sql-name { color: #f8fafc; }
+    .sql-con  { color: #fbbf24; }
+
+    /* ── DESIGN DECISIONS ── */
+    .rel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .rel-card {
+      background: #fff; border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 16px 18px;
+      page-break-inside: avoid;
+    }
+    .rel-card-title {
+      font-size: 13px; font-weight: 600; color: var(--navy);
+      margin-bottom: 8px; display: flex; align-items: center; gap: 7px;
+    }
+    .rel-card-icon { font-size: 15px; }
+    .rel-card-body { font-size: 12px; color: var(--grey); line-height: 1.7; }
+    .rel-card-body code {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      background: #f3f4f6; padding: 1px 5px; border-radius: 3px; color: #374151;
+    }
+
+    hr.section-rule {
+      border: none; border-top: 1px solid var(--border);
+      margin: 36px 0;
+    }
+
+    /* ── CALLOUT ── */
+    .callout {
+      background: #eff6ff; border-left: 4px solid var(--blue);
+      border-radius: 0 6px 6px 0;
+      padding: 10px 14px; margin-bottom: 16px;
+      font-size: 12px; color: #1e40af; line-height: 1.6;
+    }
+    .callout strong { font-weight: 600; }
+
+    /* ────────────────────────────────────────────────
+       PRINT / PDF STYLES
+    ──────────────────────────────────────────────── */
+    @page {
+      size: A4 portrait;
+      margin: 14mm 14mm 16mm 14mm;
+    }
+
+    @media print {
+      /* hide interactive elements */
+      .pdf-btn { display: none !important; }
+
+      body { background: #fff; font-size: 12px; }
+
+      .doc-header {
+        padding: 18px 28px 14px;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .doc-header h1 { font-size: 18px; }
+
+      .page { max-width: 100%; padding: 18px 0 0; }
+
+      /* force colours to print */
+      * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      /* page breaks */
+      .doc-header        { page-break-after: avoid; }
+      .section           { page-break-inside: avoid; }
+      hr.section-rule    { page-break-after: avoid; margin: 20px 0; }
+
+      .section:nth-child(3) { page-break-before: always; } /* table defs */
+      .section:nth-child(5) { page-break-before: always; } /* config keys */
+      .section:nth-child(7) { page-break-before: always; } /* DDL */
+      .section:nth-child(9) { page-break-before: always; } /* design decisions */
+
+      .table-def     { page-break-inside: avoid; margin-bottom: 14px; }
+      .sql-block     { page-break-inside: avoid; margin-bottom: 12px; }
+      .rel-card      { page-break-inside: avoid; }
+      .index-block   { page-break-inside: avoid; }
+      .json-example  { page-break-inside: avoid; }
+
+      /* compact summary grid for print */
+      .summary-grid { grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 16px; }
+      .summary-card-value { font-size: 22px; }
+
+      /* ER diagram — make it fit */
+      .er-wrap { padding: 16px; overflow: visible; }
+      .er-diagram { min-width: unset; justify-content: flex-start; }
+
+      /* rel grid — full width on print */
+      .rel-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+
+      /* reduce padding on tables */
+      .col-table tbody td { padding: 6px 10px; }
+      .col-table thead th { padding: 6px 10px; }
+      .kv-table tbody td  { padding: 6px 10px; }
+      .kv-table thead th  { padding: 6px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- PDF DOWNLOAD BUTTON -->
+<button class="pdf-btn" onclick="window.print()">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+    <polyline points="7 10 12 15 17 10"/>
+    <line x1="12" y1="15" x2="12" y2="3"/>
+  </svg>
+  Download as PDF
+</button>
+
+<!-- ═══════════════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════════════════ -->
+<div class="doc-header">
+  <div class="doc-header-eyebrow">Migra — Database Design Document</div>
+  <h1>OD-to-OD Instance Migration — Schema</h1>
+  <div class="doc-header-sub">Database additions required to support migration between two SDP OnDemand instances</div>
+  <div class="doc-header-meta">
+    <div class="meta-item"><strong>Version</strong>1.2.0.0</div>
+    <div class="meta-item"><strong>Database</strong>HSQLDB (embedded, port 9001)</div>
+    <div class="meta-item"><strong>New Tables</strong>2</div>
+    <div class="meta-item"><strong>Existing Tables Modified</strong>0 (config keys added only)</div>
+    <div class="meta-item"><strong>Date</strong>April 2026</div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ═══════════════════════════════════════════════════
+       1. AT A GLANCE
+  ════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">At a Glance</div>
+
+    <div class="summary-grid">
+      <div class="summary-card blue">
+        <div class="summary-card-value">2</div>
+        <div class="summary-card-label">New tables added</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-value">0</div>
+        <div class="summary-card-label">Existing schemas altered</div>
+      </div>
+      <div class="summary-card green">
+        <div class="summary-card-value">9</div>
+        <div class="summary-card-label">New MIGRATION_CONFIG keys</div>
+      </div>
+      <div class="summary-card orange">
+        <div class="summary-card-value">3</div>
+        <div class="summary-card-label">New indexes added</div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--navy);"></div>New table (this feature)
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#d1d5db;"></div>Existing table (unchanged)
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#fef3c7;border:1px solid #d97706;"></div>Primary Key
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#dbeafe;border:1px solid #3b82f6;"></div>Foreign Key
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#dcfce7;border:1px solid #16a34a;"></div>Indexed column
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       2. ER DIAGRAM
+  ════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">Entity Relationship Diagram</div>
+    <div class="er-wrap">
+      <div class="er-diagram">
+
+        <!-- MIGRATIONS (existing) -->
+        <div class="er-table existing-table">
+          <div class="er-table-header">MIGRATIONS <span class="er-badge ext">existing</span></div>
+          <div class="er-row pk">
+            <span class="er-col-key">PK</span>
+            <span class="er-col-name">MIGRATION_ID</span>
+            <span class="er-col-type">VARCHAR(50)</span>
+          </div>
+          <div class="er-row">
+            <span class="er-col-key"></span>
+            <span class="er-col-name">MIGRATION_NAME</span>
+            <span class="er-col-type">VARCHAR(200)</span>
+          </div>
+          <div class="er-row">
+            <span class="er-col-key"></span>
+            <span class="er-col-name">STATUS</span>
+            <span class="er-col-type">VARCHAR(50)</span>
+          </div>
+          <div class="er-row">
+            <span class="er-col-key"></span>
+            <span class="er-col-name">CREATED_AT</span>
+            <span class="er-col-type">TIMESTAMP</span>
+          </div>
+          <div class="er-row">
+            <span class="er-col-key"></span>
+            <span class="er-col-name">OWNER</span>
+            <span class="er-col-type">VARCHAR(50)</span>
+          </div>
+        </div>
+
+        <!-- Branch connector -->
+        <div style="position:relative;display:flex;flex-direction:column;justify-content:space-around;align-items:flex-start;padding:0 4px;min-height:260px;width:60px;flex-shrink:0;">
+          <!-- vertical spine -->
+          <div style="position:absolute;left:8px;top:30%;bottom:30%;width:2px;background:var(--border);"></div>
+          <!-- top arm -->
+          <div style="display:flex;align-items:center;gap:0;position:relative;z-index:1;margin-top:40px;">
+            <div style="width:2px;height:2px;background:var(--border);"></div>
+            <div style="position:relative;width:40px;height:2px;background:var(--border);">
+              <div style="position:absolute;right:-6px;top:-5px;color:var(--grey);font-size:10px;">▶</div>
+            </div>
+          </div>
+          <div style="position:absolute;left:50%;top:30%;transform:translateX(-50%) translateY(-50%);font-size:9px;color:var(--grey);background:#fff;padding:0 3px;">1</div>
+          <div style="position:absolute;left:50%;top:70%;transform:translateX(-50%) translateY(-50%);font-size:9px;color:var(--grey);background:#fff;padding:0 3px;">1</div>
+          <!-- bottom arm -->
+          <div style="display:flex;align-items:center;gap:0;position:relative;z-index:1;margin-bottom:40px;">
+            <div style="width:2px;height:2px;background:var(--border);"></div>
+            <div style="position:relative;width:40px;height:2px;background:var(--border);">
+              <div style="position:absolute;right:-6px;top:-5px;color:var(--grey);font-size:10px;">▶</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right column: two tables stacked -->
+        <div class="er-right-col">
+
+          <!-- OD_ENTITY_STATUS -->
+          <div class="er-table new-table">
+            <div class="er-table-header">OD_ENTITY_STATUS <span class="er-badge new">new</span></div>
+            <div class="er-row pk">
+              <span class="er-col-key">PK</span>
+              <span class="er-col-name">ID</span>
+              <span class="er-col-type">BIGINT</span>
+            </div>
+            <div class="er-row fk">
+              <span class="er-col-key">FK</span>
+              <span class="er-col-name">MIGRATION_ID</span>
+              <span class="er-col-type">VARCHAR(50)</span>
+            </div>
+            <div class="er-row">
+              <span class="er-col-key"></span>
+              <span class="er-col-name">ENTITY_NAME</span>
+              <span class="er-col-type">VARCHAR(100)</span>
+            </div>
+            <div class="er-row">
+              <span class="er-col-key"></span>
+              <span class="er-col-name">PHASE / ORDER_ID</span>
+              <span class="er-col-type">INT</span>
+            </div>
+            <div class="er-row">
+              <span class="er-col-key"></span>
+              <span class="er-col-name">STATUS</span>
+              <span class="er-col-type">VARCHAR(15)</span>
+            </div>
+            <div class="er-row">
+              <span class="er-col-key"></span>
+              <span class="er-col-name">TOTAL / PROCESSED / FAILED</span>
+              <span class="er-col-type">BIGINT</span>
+            </div>
+            <div class="er-row">
+              <span class="er-col-key"></span>
+              <span class="er-col-name">LAST_PROCESSED_ID</span>
+              <span class="er-col-type">VARCHAR(200)</span>
+            </div>
+            <div class="er-row">
+              <span class="er-col-key"></span>
+              <span class="er-col-name">ERROR_MESSAGE</span>
+              <span class="er-col-type">VARCHAR(2000)</span>
+            </div>
+            <div class="er-row">
+              <span class="er-col-key"></span>
+              <span class="er-col-name">START_TIME / END_TIME</span>
+              <span class="er-col-type">TIMESTAMP</span>
+            </div>
+          </div>
+
+          <!-- N labels -->
+          <div style="display:flex;justify-content:flex-start;gap:6px;">
+            <span style="font-size:9px;color:var(--grey);margin-left:8px;">N</span>
+            <span style="flex:1;"></span>
+            <span style="font-size:9px;color:var(--grey);margin-right:8px;">N</span>
+          </div>
+
+          <!-- OD_ENTITY_FILTERS -->
+          <div class="er-table new-table">
+            <div class="er-table-header">OD_ENTITY_FILTERS <span class="er-badge new">new</span></div>
+            <div class="er-row pk">
+              <span class="er-col-key">PK</span>
+              <span class="er-col-name">ID</span>
+              <span class="er-col-type">BIGINT</span>
+            </div>
+            <div class="er-row fk">
+              <span class="er-col-key">FK</span>
+              <span class="er-col-name">MIGRATION_ID</span>
+              <span class="er-col-type">VARCHAR(50)</span>
+            </div>
+            <div class="er-row">
+              <span class="er-col-key"></span>
+              <span class="er-col-name">ENTITY_NAME</span>
+              <span class="er-col-type">VARCHAR(100)</span>
+            </div>
+            <div class="er-row">
+              <span class="er-col-key"></span>
+              <span class="er-col-name">FILTER_KEY</span>
+              <span class="er-col-type">VARCHAR(100)</span>
+            </div>
+            <div class="er-row">
+              <span class="er-col-key"></span>
+              <span class="er-col-name">FILTER_VALUES</span>
+              <span class="er-col-type">VARCHAR(2000)</span>
+            </div>
+          </div>
+
+        </div><!-- /er-right-col -->
+
+      </div><!-- /er-diagram -->
+    </div><!-- /er-wrap -->
+  </div>
+
+  <hr class="section-rule"/>
+
+  <!-- ═══════════════════════════════════════════════════
+       3. TABLE DEFINITIONS
+  ════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">Table Definitions — New Tables</div>
+
+    <!-- ── OD_ENTITY_STATUS ────────────────────────── -->
+    <div class="table-def">
+      <div class="table-def-header new">
+        <span class="table-name">OD_ENTITY_STATUS</span>
+        <span class="table-desc">Per-entity migration progress, counters, and resume checkpoint</span>
+      </div>
+      <table class="col-table">
+        <thead>
+          <tr><th style="width:22%">Column</th><th style="width:17%">Type</th><th style="width:20%">Constraints</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr class="pk-row">
+            <td class="col-name">ID</td>
+            <td class="col-type">BIGINT</td>
+            <td><span class="tag tag-pk">PK</span> <span class="tag tag-nn">AUTO</span></td>
+            <td class="col-notes">GENERATED BY DEFAULT AS IDENTITY</td>
+          </tr>
+          <tr class="fk-row">
+            <td class="col-name">MIGRATION_ID</td>
+            <td class="col-type">VARCHAR(50)</td>
+            <td><span class="tag tag-fk">FK</span> <span class="tag tag-nn">NOT NULL</span></td>
+            <td class="col-notes">References <code>MIGRATIONS.MIGRATION_ID</code> — cascades on delete</td>
+          </tr>
+          <tr>
+            <td class="col-name">ENTITY_ID</td>
+            <td class="col-type">INT</td>
+            <td><span class="tag tag-nn">NOT NULL</span></td>
+            <td class="col-notes">Numeric ID from entity registry (matches <code>entity_id</code> in optoodentitydetails.csv)</td>
+          </tr>
+          <tr>
+            <td class="col-name">ENTITY_NAME</td>
+            <td class="col-type">VARCHAR(100)</td>
+            <td><span class="tag tag-nn">NOT NULL</span> <span class="tag tag-idx">IDX</span></td>
+            <td class="col-notes">e.g. <code>request</code>, <code>priority</code>, <code>request_note</code></td>
+          </tr>
+          <tr>
+            <td class="col-name">ENTITY_TYPE</td>
+            <td class="col-type">VARCHAR(15)</td>
+            <td><span class="tag tag-nn">NOT NULL</span></td>
+            <td class="col-notes">Values: <code>ENTITY</code> | <code>SUBENTITY</code></td>
+          </tr>
+          <tr>
+            <td class="col-name">PARENT_ENTITY_NAME</td>
+            <td class="col-type">VARCHAR(100)</td>
+            <td><span class="tag tag-null">NULLABLE</span></td>
+            <td class="col-notes">Set only when ENTITY_TYPE = <code>SUBENTITY</code> (e.g. <code>request</code> for <code>request_note</code>)</td>
+          </tr>
+          <tr>
+            <td class="col-name">PHASE</td>
+            <td class="col-type">INT</td>
+            <td><span class="tag tag-nn">NOT NULL</span></td>
+            <td class="col-notes"><code>1</code> = Admin/Config entities &nbsp;|&nbsp; <code>2</code> = Transactional entities</td>
+          </tr>
+          <tr>
+            <td class="col-name">ORDER_ID</td>
+            <td class="col-type">INT</td>
+            <td><span class="tag tag-nn">NOT NULL</span> <span class="tag tag-idx">IDX</span></td>
+            <td class="col-notes">Execution sequence within the phase. Rows processed in ascending ORDER_ID</td>
+          </tr>
+          <tr>
+            <td class="col-name">STATUS</td>
+            <td class="col-type">VARCHAR(15)</td>
+            <td><span class="tag tag-nn">NOT NULL</span> <span class="tag tag-def">DEFAULT</span></td>
+            <td class="col-notes">
+              <code>'NOT_STARTED'</code> default. Allowed values:
+              <div class="status-grid">
+                <span class="spill not-started">NOT_STARTED</span>
+                <span class="spill in-progress">IN_PROGRESS</span>
+                <span class="spill completed">COMPLETED</span>
+                <span class="spill partial">PARTIAL</span>
+                <span class="spill failed">FAILED</span>
+                <span class="spill skipped">SKIPPED</span>
+              </div>
+              <code>PARTIAL</code> = some records passed, some failed (see ERROR_MESSAGE)
+            </td>
+          </tr>
+          <tr>
+            <td class="col-name">TOTAL_COUNT</td>
+            <td class="col-type">BIGINT</td>
+            <td><span class="tag tag-null">NULLABLE</span></td>
+            <td class="col-notes">Total records fetched from source. Populated after the first page is read</td>
+          </tr>
+          <tr>
+            <td class="col-name">PROCESSED_COUNT</td>
+            <td class="col-type">BIGINT</td>
+            <td><span class="tag tag-def">DEFAULT 0</span></td>
+            <td class="col-notes">Successfully migrated record count. Updated after each page upload</td>
+          </tr>
+          <tr>
+            <td class="col-name">FAILED_COUNT</td>
+            <td class="col-type">BIGINT</td>
+            <td><span class="tag tag-def">DEFAULT 0</span></td>
+            <td class="col-notes">Records that could not be transformed or accepted by destination</td>
+          </tr>
+          <tr>
+            <td class="col-name">LAST_PROCESSED_ID</td>
+            <td class="col-type">VARCHAR(200)</td>
+            <td><span class="tag tag-null">NULLABLE</span></td>
+            <td class="col-notes">SDP record ID of the last successfully processed record. Used as checkpoint on resume/retry</td>
+          </tr>
+          <tr>
+            <td class="col-name">ERROR_MESSAGE</td>
+            <td class="col-type">VARCHAR(2000)</td>
+            <td><span class="tag tag-null">NULLABLE</span></td>
+            <td class="col-notes">
+              <strong>Two usage modes:</strong><br/>
+              &bull; <em>Entity-level failure</em> (STATUS = <code>FAILED</code>) — plain text, e.g. <code>"OAuth token expired. Cannot reach source API."</code><br/>
+              &bull; <em>Record-level partial failures</em> (STATUS = <code>PARTIAL</code>) — JSON array of aggregated error buckets. See example below.
+            </td>
+          </tr>
+          <tr>
+            <td class="col-name">START_TIME</td>
+            <td class="col-type">TIMESTAMP</td>
+            <td><span class="tag tag-null">NULLABLE</span></td>
+            <td class="col-notes">Set when entity transitions to <code>IN_PROGRESS</code></td>
+          </tr>
+          <tr>
+            <td class="col-name">END_TIME</td>
+            <td class="col-type">TIMESTAMP</td>
+            <td><span class="tag tag-null">NULLABLE</span></td>
+            <td class="col-notes">Set when entity reaches <code>COMPLETED</code>, <code>PARTIAL</code>, <code>FAILED</code>, or <code>SKIPPED</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- ERROR_MESSAGE JSON example -->
+      <div style="padding:0 14px 2px;margin-top:4px;">
+        <div style="font-size:11px;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">ERROR_MESSAGE — PARTIAL status example</div>
+      </div>
+      <div class="json-example">
+<span class="j-punc">[</span>
+  <span class="j-punc">{</span> <span class="j-key">"reason"</span><span class="j-punc">:</span> <span class="j-str">"Duplicate name — record already exists in destination"</span><span class="j-punc">,</span> <span class="j-key">"count"</span><span class="j-punc">:</span> <span class="j-num">10</span> <span class="j-punc">},</span>
+  <span class="j-punc">{</span> <span class="j-key">"reason"</span><span class="j-punc">:</span> <span class="j-str">"Description field exceeds 32000 character limit"</span><span class="j-punc">,</span>    <span class="j-key">"count"</span><span class="j-punc">:</span> <span class="j-num">5</span>  <span class="j-punc">}</span>
+<span class="j-punc">]</span>
+<span class="j-cmt">  -- 85 of 100 records succeeded → PROCESSED_COUNT=85, FAILED_COUNT=15, STATUS='PARTIAL'</span></div>
+
+      <div class="index-block">
+        <div class="idx-title">Indexes</div>
+        <div class="index-line">CREATE INDEX idx_od_entity_status_mig  ON OD_ENTITY_STATUS (MIGRATION_ID, PHASE, ORDER_ID);</div>
+        <div class="index-line">CREATE INDEX idx_od_entity_status_name ON OD_ENTITY_STATUS (MIGRATION_ID, ENTITY_NAME);</div>
+      </div>
+    </div><!-- /OD_ENTITY_STATUS -->
+
+    <!-- ── OD_ENTITY_FILTERS ───────────────────────── -->
+    <div class="table-def">
+      <div class="table-def-header new">
+        <span class="table-name">OD_ENTITY_FILTERS</span>
+        <span class="table-desc">Per-entity source filter criteria applied during API fetch</span>
+      </div>
+      <table class="col-table">
+        <thead>
+          <tr><th style="width:22%">Column</th><th style="width:17%">Type</th><th style="width:20%">Constraints</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr class="pk-row">
+            <td class="col-name">ID</td>
+            <td class="col-type">BIGINT</td>
+            <td><span class="tag tag-pk">PK</span> <span class="tag tag-nn">AUTO</span></td>
+            <td class="col-notes">GENERATED BY DEFAULT AS IDENTITY</td>
+          </tr>
+          <tr class="fk-row">
+            <td class="col-name">MIGRATION_ID</td>
+            <td class="col-type">VARCHAR(50)</td>
+            <td><span class="tag tag-fk">FK</span> <span class="tag tag-nn">NOT NULL</span></td>
+            <td class="col-notes">References <code>MIGRATIONS.MIGRATION_ID</code> — cascades on delete</td>
+          </tr>
+          <tr>
+            <td class="col-name">ENTITY_NAME</td>
+            <td class="col-type">VARCHAR(100)</td>
+            <td><span class="tag tag-nn">NOT NULL</span> <span class="tag tag-idx">IDX</span></td>
+            <td class="col-notes">Transactional entity this filter applies to (e.g. <code>request</code>, <code>change</code>, <code>project</code>)</td>
+          </tr>
+          <tr>
+            <td class="col-name">FILTER_KEY</td>
+            <td class="col-type">VARCHAR(100)</td>
+            <td><span class="tag tag-nn">NOT NULL</span></td>
+            <td class="col-notes">SDP v3 API field path (e.g. <code>status.name</code>, <code>priority.name</code>, <code>category.name</code>)</td>
+          </tr>
+          <tr>
+            <td class="col-name">FILTER_VALUES</td>
+            <td class="col-type">VARCHAR(2000)</td>
+            <td><span class="tag tag-nn">NOT NULL</span></td>
+            <td class="col-notes">JSON array of selected values e.g. <code>["Open","In Progress"]</code>. Translated to <code>list_info.search_criteria</code> in SDP v3 API calls at fetch time</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="index-block">
+        <div class="idx-title">Index</div>
+        <div class="index-line">CREATE INDEX idx_od_filters ON OD_ENTITY_FILTERS (MIGRATION_ID, ENTITY_NAME);</div>
+        <div class="index-line cmt">-- Lookup pattern: WHERE MIGRATION_ID = ? AND ENTITY_NAME = ?</div>
+      </div>
+    </div><!-- /OD_ENTITY_FILTERS -->
+
+  </div>
+
+  <hr class="section-rule"/>
+
+  <!-- ═══════════════════════════════════════════════════
+       4. MIGRATION_CONFIG KEYS
+  ════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">New MIGRATION_CONFIG Keys &nbsp;(existing table — data only, no schema change)</div>
+
+    <div class="callout">
+      The existing <strong>MIGRATION_CONFIG</strong> table stores all wizard settings as key-value rows keyed by MIGRATION_ID. The OD feature adds 9 new CONFIG_KEY entries written during Step 1 of the wizard. No DDL change required.
+    </div>
+
+    <div class="table-def">
+      <div class="table-def-header existing">
+        <span class="table-name">MIGRATION_CONFIG</span>
+        <span class="table-desc">New CONFIG_KEY entries for OD-to-OD migrations</span>
+      </div>
+      <table class="kv-table">
+        <thead>
+          <tr><th style="width:30%">CONFIG_KEY</th><th style="width:28%">Example CONFIG_VALUE</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="kv-key">step1_src_accountsUrl</td>
+            <td class="kv-eg">accounts.zoho.com</td>
+            <td class="col-notes">Zoho accounts URL for source OAuth token exchange</td>
+          </tr>
+          <tr>
+            <td class="kv-key">step1_src_domainUrl</td>
+            <td class="kv-eg">https://demo.sdpondemand.com</td>
+            <td class="col-notes">Source portal base URL for all v3 API calls</td>
+          </tr>
+          <tr>
+            <td class="kv-key">step1_src_clientId</td>
+            <td class="kv-eg">1000.XXXXX…</td>
+            <td class="col-notes">OAuth Client ID for source instance (hashed in ZTOKENS)</td>
+          </tr>
+          <tr>
+            <td class="kv-key">step1_src_clientSecret</td>
+            <td class="kv-eg">abc123…</td>
+            <td class="col-notes">OAuth Client Secret for source instance</td>
+          </tr>
+          <tr>
+            <td class="kv-key">step1_src_instanceName</td>
+            <td class="kv-eg">Demo Corp</td>
+            <td class="col-notes">Display name fetched from source after OAuth — shown in UI and progress header</td>
+          </tr>
+          <tr>
+            <td class="kv-key">step1_od_selectedEntities</td>
+            <td class="kv-eg">["request","change","project"]</td>
+            <td class="col-notes">JSON array of transactional entity names chosen by user. Admin entities always included implicitly</td>
+          </tr>
+          <tr>
+            <td class="kv-key">step1_od_dateFrom</td>
+            <td class="kv-eg">2024-01-01</td>
+            <td class="col-notes">Start date filter applied to all transactional entity API calls (ISO date)</td>
+          </tr>
+          <tr>
+            <td class="kv-key">step1_od_dateTo</td>
+            <td class="kv-eg">2026-04-21</td>
+            <td class="col-notes">End date filter for transactional entities</td>
+          </tr>
+          <tr>
+            <td class="kv-key">step1_od_includeAttachments</td>
+            <td class="kv-eg">false</td>
+            <td class="col-notes">Boolean. When <code>true</code>, attachment files are downloaded from source and bundled into ZIP</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="section-rule"/>
+
+  <!-- ═══════════════════════════════════════════════════
+       5. DDL
+  ════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">DDL — CREATE Statements (HSQLDB syntax)</div>
+
+    <div class="sql-block"><span class="sql-cmt">-- ─────────────────────────────────────────────────────────────────────
+-- Table 1: Per-entity migration progress, counters, and resume checkpoint
+-- ─────────────────────────────────────────────────────────────────────</span>
+<span class="sql-kw">CREATE TABLE IF NOT EXISTS</span> <span class="sql-name">OD_ENTITY_STATUS</span> <span class="sql-punc">(</span>
+  <span class="sql-name">ID</span>                  <span class="sql-type">BIGINT</span>         <span class="sql-kw">GENERATED BY DEFAULT AS IDENTITY</span> <span class="sql-con">PRIMARY KEY</span><span class="sql-punc">,</span>
+  <span class="sql-name">MIGRATION_ID</span>        <span class="sql-type">VARCHAR</span><span class="sql-punc">(</span>50<span class="sql-punc">)</span>    <span class="sql-con">NOT NULL</span>  <span class="sql-kw">REFERENCES</span> <span class="sql-name">MIGRATIONS</span><span class="sql-punc">(</span><span class="sql-name">MIGRATION_ID</span><span class="sql-punc">)</span> <span class="sql-kw">ON DELETE CASCADE</span><span class="sql-punc">,</span>
+  <span class="sql-name">ENTITY_ID</span>           <span class="sql-type">INT</span>            <span class="sql-con">NOT NULL</span><span class="sql-punc">,</span>
+  <span class="sql-name">ENTITY_NAME</span>         <span class="sql-type">VARCHAR</span><span class="sql-punc">(</span>100<span class="sql-punc">)</span>   <span class="sql-con">NOT NULL</span><span class="sql-punc">,</span>
+  <span class="sql-name">ENTITY_TYPE</span>         <span class="sql-type">VARCHAR</span><span class="sql-punc">(</span>15<span class="sql-punc">)</span>    <span class="sql-con">NOT NULL</span><span class="sql-punc">,</span>             <span class="sql-cmt">-- 'ENTITY' | 'SUBENTITY'</span>
+  <span class="sql-name">PARENT_ENTITY_NAME</span>  <span class="sql-type">VARCHAR</span><span class="sql-punc">(</span>100<span class="sql-punc">)</span><span class="sql-punc">,</span>
+  <span class="sql-name">PHASE</span>               <span class="sql-type">INT</span>            <span class="sql-con">NOT NULL</span><span class="sql-punc">,</span>             <span class="sql-cmt">-- 1 = admin, 2 = transactional</span>
+  <span class="sql-name">ORDER_ID</span>            <span class="sql-type">INT</span>            <span class="sql-con">NOT NULL</span><span class="sql-punc">,</span>
+  <span class="sql-name">STATUS</span>              <span class="sql-type">VARCHAR</span><span class="sql-punc">(</span>15<span class="sql-punc">)</span>    <span class="sql-con">NOT NULL</span>  <span class="sql-kw">DEFAULT</span> <span class="sql-str">'NOT_STARTED'</span><span class="sql-punc">,</span>
+  <span class="sql-cmt">                                                        -- NOT_STARTED | IN_PROGRESS | COMPLETED | PARTIAL | FAILED | SKIPPED</span>
+  <span class="sql-name">TOTAL_COUNT</span>         <span class="sql-type">BIGINT</span><span class="sql-punc">,</span>
+  <span class="sql-name">PROCESSED_COUNT</span>     <span class="sql-type">BIGINT</span>                        <span class="sql-kw">DEFAULT</span> 0<span class="sql-punc">,</span>
+  <span class="sql-name">FAILED_COUNT</span>        <span class="sql-type">BIGINT</span>                        <span class="sql-kw">DEFAULT</span> 0<span class="sql-punc">,</span>
+  <span class="sql-name">LAST_PROCESSED_ID</span>   <span class="sql-type">VARCHAR</span><span class="sql-punc">(</span>200<span class="sql-punc">),</span>
+  <span class="sql-name">ERROR_MESSAGE</span>       <span class="sql-type">VARCHAR</span><span class="sql-punc">(</span>2000<span class="sql-punc">),</span>               <span class="sql-cmt">-- plain text (FAILED) or JSON array (PARTIAL)</span>
+  <span class="sql-name">START_TIME</span>          <span class="sql-type">TIMESTAMP</span><span class="sql-punc">,</span>
+  <span class="sql-name">END_TIME</span>            <span class="sql-type">TIMESTAMP</span>
+<span class="sql-punc">);</span>
+
+<span class="sql-kw">CREATE INDEX</span> <span class="sql-name">idx_od_entity_status_mig</span>  <span class="sql-kw">ON</span> <span class="sql-name">OD_ENTITY_STATUS</span> <span class="sql-punc">(</span><span class="sql-name">MIGRATION_ID</span><span class="sql-punc">,</span> <span class="sql-name">PHASE</span><span class="sql-punc">,</span> <span class="sql-name">ORDER_ID</span><span class="sql-punc">);</span>
+<span class="sql-kw">CREATE INDEX</span> <span class="sql-name">idx_od_entity_status_name</span> <span class="sql-kw">ON</span> <span class="sql-name">OD_ENTITY_STATUS</span> <span class="sql-punc">(</span><span class="sql-name">MIGRATION_ID</span><span class="sql-punc">,</span> <span class="sql-name">ENTITY_NAME</span><span class="sql-punc">);</span></div>
+
+    <div class="sql-block"><span class="sql-cmt">-- ─────────────────────────────────────────────────────────────────────
+-- Table 2: Per-entity source filter criteria (translated to SDP v3 search_criteria)
+-- ─────────────────────────────────────────────────────────────────────</span>
+<span class="sql-kw">CREATE TABLE IF NOT EXISTS</span> <span class="sql-name">OD_ENTITY_FILTERS</span> <span class="sql-punc">(</span>
+  <span class="sql-name">ID</span>             <span class="sql-type">BIGINT</span>         <span class="sql-kw">GENERATED BY DEFAULT AS IDENTITY</span> <span class="sql-con">PRIMARY KEY</span><span class="sql-punc">,</span>
+  <span class="sql-name">MIGRATION_ID</span>   <span class="sql-type">VARCHAR</span><span class="sql-punc">(</span>50<span class="sql-punc">)</span>    <span class="sql-con">NOT NULL</span>  <span class="sql-kw">REFERENCES</span> <span class="sql-name">MIGRATIONS</span><span class="sql-punc">(</span><span class="sql-name">MIGRATION_ID</span><span class="sql-punc">)</span> <span class="sql-kw">ON DELETE CASCADE</span><span class="sql-punc">,</span>
+  <span class="sql-name">ENTITY_NAME</span>    <span class="sql-type">VARCHAR</span><span class="sql-punc">(</span>100<span class="sql-punc">)</span>   <span class="sql-con">NOT NULL</span><span class="sql-punc">,</span>             <span class="sql-cmt">-- e.g. 'request', 'change', 'project'</span>
+  <span class="sql-name">FILTER_KEY</span>     <span class="sql-type">VARCHAR</span><span class="sql-punc">(</span>100<span class="sql-punc">)</span>   <span class="sql-con">NOT NULL</span><span class="sql-punc">,</span>             <span class="sql-cmt">-- e.g. 'status.name', 'priority.name'</span>
+  <span class="sql-name">FILTER_VALUES</span>  <span class="sql-type">VARCHAR</span><span class="sql-punc">(</span>2000<span class="sql-punc">)</span>  <span class="sql-con">NOT NULL</span>               <span class="sql-cmt">-- JSON array e.g. '["Open","In Progress"]'</span>
+<span class="sql-punc">);</span>
+
+<span class="sql-kw">CREATE INDEX</span> <span class="sql-name">idx_od_filters</span> <span class="sql-kw">ON</span> <span class="sql-name">OD_ENTITY_FILTERS</span> <span class="sql-punc">(</span><span class="sql-name">MIGRATION_ID</span><span class="sql-punc">,</span> <span class="sql-name">ENTITY_NAME</span><span class="sql-punc">);</span></div>
+
+  </div>
+
+  <hr class="section-rule"/>
+
+  <!-- ═══════════════════════════════════════════════════
+       6. DESIGN DECISIONS
+  ════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">Table Relationships &amp; Design Decisions</div>
+    <div class="rel-grid">
+
+      <div class="rel-card">
+        <div class="rel-card-title"><span class="rel-card-icon">🔗</span> ON DELETE CASCADE</div>
+        <div class="rel-card-body">
+          Both new tables reference <code>MIGRATIONS.MIGRATION_ID</code> with <code>ON DELETE CASCADE</code>.
+          Deleting a migration from the dashboard automatically purges all its entity statuses and filter configurations —
+          consistent with how <code>MIGRATION_CONFIG</code> cleanup already works.
+        </div>
+      </div>
+
+      <div class="rel-card">
+        <div class="rel-card-title"><span class="rel-card-icon">⚠️</span> ERROR_MESSAGE — aggregated JSON, not per-record log</div>
+        <div class="rel-card-body">
+          A separate error-log table was considered but rejected: migrations can involve <strong>lakhs of records</strong>,
+          making per-row failure storage impractical for an embedded HSQLDB instance.
+          Instead, the engine groups failures by reason and stores a compact JSON summary
+          (<code>[{"reason":"…","count":N}]</code>).
+          This is sufficient for display on the progress page and for support triage.
+        </div>
+      </div>
+
+      <div class="rel-card">
+        <div class="rel-card-title"><span class="rel-card-icon">🔑</span> ZTOKENS — dual OAuth credentials</div>
+        <div class="rel-card-body">
+          The existing <code>ZTOKENS</code> table stores tokens keyed by <code>SHA-512(clientId + clientSecret)</code>.
+          Source and destination credentials produce distinct hashes, so they naturally occupy separate rows
+          with no schema modification.
+        </div>
+      </div>
+
+      <div class="rel-card">
+        <div class="rel-card-title"><span class="rel-card-icon">↩️</span> Resume via LAST_PROCESSED_ID</div>
+        <div class="rel-card-body">
+          When a migration is paused or fails mid-entity, <code>OD_ENTITY_STATUS.LAST_PROCESSED_ID</code>
+          stores the SDP record ID of the last successfully uploaded record.
+          On resume, the source API fetch restarts from that record ID,
+          skipping already-processed records without duplicating data.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+  // Override window.print title so the saved PDF filename is meaningful
+  document.title = 'OD-to-OD Migration DB Schema v1.2';
+</script>
+
+</body>
+</html>
