@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>OD Migration — Filter Customization</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f4f4f6;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    /* ── NAV ─────────────────────────────────────────────────────── */
+    .topnav {
+      background: #00096f;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topnav-logo { color: #fff; font-size: 20px; font-weight: 700; letter-spacing: 0.3px; }
+
+    /* ── LAYOUT ──────────────────────────────────────────────────── */
+    .layout { display: flex; min-height: calc(100vh - 54px); }
+
+    .sidebar {
+      width: 220px;
+      background: #f0f0f0;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-step {
+      padding: 13px 18px;
+      font-size: 13px;
+      color: #333;
+      border-left: 3px solid transparent;
+    }
+    .sidebar-step.active {
+      background: #00096f;
+      color: #fff;
+      border-left-color: #4a7fe8;
+      font-weight: 500;
+    }
+    .sidebar-meta {
+      padding: 20px 14px 8px;
+      margin-top: 12px;
+      border-top: 1px solid #ddd;
+    }
+    .sidebar-meta-label { font-size: 10px; font-weight: 600; color: #888; letter-spacing: 0.8px; text-transform: uppercase; }
+    .sidebar-meta-value { font-size: 13px; font-weight: 500; color: #00096f; margin-top: 3px; }
+
+    /* ── MAIN CONTENT ────────────────────────────────────────────── */
+    .main { flex: 1; padding: 28px 32px; overflow-y: auto; }
+
+    .page-title {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+    .page-heading {
+      font-size: 20px;
+      font-weight: 600;
+      color: #00096f;
+      margin-bottom: 20px;
+    }
+
+    /* ── INFO BANNER ─────────────────────────────────────────────── */
+    .info-banner {
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 6px;
+      padding: 11px 16px;
+      font-size: 13px;
+      color: #3730a3;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .info-banner i { font-size: 14px; flex-shrink: 0; }
+
+    /* ── ENTITY FILTER CARD ──────────────────────────────────────── */
+    .entity-filter-card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+      margin-bottom: 12px;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+    .entity-filter-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.13); }
+
+    /* Entity row header */
+    .entity-header {
+      display: flex;
+      align-items: center;
+      padding: 13px 18px;
+      cursor: pointer;
+      gap: 12px;
+      user-select: none;
+    }
+    .entity-phase-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .phase-transactional { background: #e07b00; }
+
+    .entity-name {
+      font-size: 14px;
+      font-weight: 500;
+      flex: 1;
+      color: #111;
+    }
+
+    .filter-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 1px solid;
+      transition: all 0.15s;
+    }
+    .filter-badge.none {
+      background: #f3f4f6;
+      border-color: #d1d5db;
+      color: #6b7280;
+    }
+    .filter-badge.active {
+      background: #eff6ff;
+      border-color: #93c5fd;
+      color: #1d4ed8;
+    }
+    .filter-badge.active i { color: #16a34a; }
+
+    .filter-summary-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-left: 4px;
+    }
+    .chip {
+      font-size: 11px;
+      background: #dbeafe;
+      color: #1e40af;
+      border-radius: 10px;
+      padding: 2px 9px;
+      font-weight: 500;
+    }
+
+    .chevron {
+      font-size: 12px;
+      color: #9ca3af;
+      transition: transform 0.2s;
+      margin-left: 6px;
+    }
+    .entity-filter-card.open .chevron { transform: rotate(180deg); }
+
+    /* Filter Panel */
+    .filter-panel {
+      display: none;
+      border-top: 1px solid #e5e7eb;
+      padding: 18px 22px 20px 40px;
+      background: #fafafa;
+      animation: slideDown 0.18s ease;
+    }
+    .entity-filter-card.open .filter-panel { display: block; }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .filter-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .filter-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      width: 96px;
+      flex-shrink: 0;
+      padding-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .filter-options { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+    /* Toggle chips (multi-select) */
+    .toggle-chip {
+      font-size: 12px;
+      padding: 5px 14px;
+      border-radius: 16px;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      color: #374151;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .toggle-chip:hover { border-color: #134CB7; color: #134CB7; }
+    .toggle-chip.selected {
+      background: #134CB7;
+      border-color: #134CB7;
+      color: #fff;
+    }
+    .toggle-chip.selected:hover { background: #0f3a94; }
+
+    /* Dropdown select */
+    .filter-select {
+      font-size: 13px;
+      padding: 6px 28px 6px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E") no-repeat right 10px center;
+      appearance: none;
+      color: #374151;
+      cursor: pointer;
+      min-width: 160px;
+    }
+    .filter-select:focus { outline: none; border-color: #134CB7; box-shadow: 0 0 0 2px rgba(19,76,183,0.1); }
+
+    /* Date range mini */
+    .date-mini {
+      font-size: 12px;
+      padding: 5px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #fff;
+      color: #374151;
+      width: 140px;
+    }
+    .date-separator { font-size: 12px; color: #9ca3af; align-self: center; }
+
+    /* Filter panel footer */
+    .filter-panel-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .btn-clear {
+      font-size: 13px;
+      padding: 7px 18px;
+      border-radius: 5px;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      color: #6b7280;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .btn-clear:hover { border-color: #9ca3af; color: #374151; }
+    .btn-apply {
+      font-size: 13px;
+      padding: 7px 20px;
+      border-radius: 5px;
+      border: none;
+      background: #134CB7;
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .btn-apply:hover { background: #0f3a94; }
+
+    /* ── SECTION DIVIDER ─────────────────────────────────────────── */
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #9ca3af;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      margin: 20px 0 10px;
+    }
+
+    /* ── GLOBAL DATE ROW ─────────────────────────────────────────── */
+    .global-row {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.09);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .global-row-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      flex-shrink: 0;
+    }
+    .global-date-input {
+      font-size: 13px;
+      padding: 7px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #fff;
+      color: #374151;
+      font-family: inherit;
+      width: 148px;
+    }
+    .global-date-input:focus { outline: none; border-color: #134CB7; }
+    .global-note {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-left: auto;
+    }
+
+    /* ── BOTTOM ACTIONS ──────────────────────────────────────────── */
+    .bottom-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px dashed #d1d5db;
+    }
+    .btn-back {
+      font-size: 14px;
+      padding: 10px 22px;
+      border-radius: 5px;
+      border: 1px solid #d1d5db;
+      background: rgba(128,128,128,0.1);
+      color: #374151;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-next {
+      font-size: 14px;
+      padding: 10px 28px;
+      border-radius: 5px;
+      border: none;
+      background: #134CB7;
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+    }
+    .btn-next:hover { background: #0f3a94; }
+    .filter-summary-text {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .filter-summary-text strong { color: #134CB7; }
+
+    /* ── PROGRESS PAGE PREVIEW ───────────────────────────────────── */
+    .preview-section {
+      margin-top: 48px;
+      padding-top: 28px;
+      border-top: 2px dashed #e5e7eb;
+    }
+    .preview-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin-bottom: 14px;
+    }
+    .preview-card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.09);
+      overflow: hidden;
+    }
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .preview-table thead th {
+      background: #f3f4f6;
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .preview-table tbody td {
+      padding: 11px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+    .preview-table tbody tr:last-child td { border-bottom: none; }
+    .preview-table tbody tr:hover { background: #fafafa; }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 11px;
+    }
+    .status-inprogress { background: #eff6ff; color: #1d4ed8; }
+    .status-waiting    { background: #f3f4f6; color: #6b7280; }
+    .status-completed  { background: #f0fdf4; color: #15803d; }
+
+    .filter-chips-cell { display: flex; gap: 5px; flex-wrap: wrap; }
+    .filter-chip-small {
+      font-size: 11px;
+      background: #fef3c7;
+      color: #92400e;
+      border-radius: 9px;
+      padding: 2px 8px;
+      font-weight: 500;
+    }
+
+    .entity-dot-small {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block; margin-right: 7px; vertical-align: middle;
+    }
+    .dot-blue   { background: #134CB7; }
+    .dot-orange { background: #e07b00; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="topnav">
+  <span class="topnav-logo">Migra</span>
+</nav>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-step">Source Details</div>
+    <div class="sidebar-step active">Filter Customization</div>
+    <div class="sidebar-step">SDP Cloud Auth</div>
+    <div class="sidebar-step">Migration Progress</div>
+    <div class="sidebar-meta">
+      <div class="sidebar-meta-label">Migration</div>
+      <div class="sidebar-meta-value">Migration_001</div>
+      <div style="font-size:11px;color:#aaa;margin-top:2px;">MIG-17141234-A1B2</div>
+    </div>
+    <div class="sidebar-meta" style="margin-top:8px;">
+      <div class="sidebar-meta-label">Source</div>
+      <div class="sidebar-meta-value">Demo Corp</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <div class="page-title">Step 1b</div>
+    <div class="page-heading">Filter Customization</div>
+
+    <!-- INFO BANNER -->
+    <div class="info-banner">
+      <i class="fa-solid fa-circle-info"></i>
+      Filters apply to <strong>transactional entities only</strong>. Admin configuration entities are always migrated in full as prerequisites. Filters are applied server-side at the source — only matching records are fetched.
+    </div>
+
+    <!-- GLOBAL DATE RANGE -->
+    <div class="section-label">Global Date Range</div>
+    <div class="global-row">
+      <span class="global-row-label">Migrate records created between</span>
+      <input type="date" class="global-date-input" value="2024-01-01">
+      <span style="font-size:13px;color:#9ca3af;">to</span>
+      <input type="date" class="global-date-input" value="2026-04-21">
+      <span class="global-note"><i class="fa-regular fa-circle-question" style="margin-right:4px;"></i>Leave blank to migrate all records regardless of date</span>
+    </div>
+
+    <!-- PER-ENTITY FILTERS -->
+    <div class="section-label">Per-Entity Filters</div>
+
+    <!-- ── REQUEST ──────────────────────────────────────────── -->
+    <div class="entity-filter-card open" id="card-request">
+      <div class="entity-header" onclick="toggleCard('card-request')">
+        <span class="entity-phase-dot phase-transactional"></span>
+        <span class="entity-name">request</span>
+        <div class="filter-summary-chips">
+          <span class="chip">Status: Open, In Progress</span>
+          <span class="chip">Priority: High</span>
+        </div>
+        <span class="filter-badge active">
+          <i class="fa-solid fa-check"></i> Filter Active
+        </span>
+        <i class="fa-solid fa-chevron-down chevron"></i>
+      </div>
+      <div class="filter-panel">
+
+        <div class="filter-row">
+          <span class="filter-label">Status</span>
+          <div class="filter-options">
+            <span class="toggle-chip selected" onclick="toggleChip(this)">Open</span>
+            <span class="toggle-chip selected" onclick="toggleChip(this)">In Progress</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">On Hold</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Resolved</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Closed</span>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-label">Priority</span>
+          <div class="filter-options">
+            <span class="toggle-chip" onclick="toggleChip(this)">All</span>
+            <span class="toggle-chip selected" onclick="toggleChip(this)">High</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Medium</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Low</span>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-label">Category</span>
+          <div class="filter-options">
+            <select class="filter-select">
+              <option value="">All Categories</option>
+              <option>Network</option>
+              <option>Hardware</option>
+              <option>Software</option>
+              <option>Security</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-label">Assignee</span>
+          <div class="filter-options">
+            <select class="filter-select">
+              <option value="">All Technicians</option>
+              <option>John Smith</option>
+              <option>Priya Rajan</option>
+              <option>Alex Chen</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-panel-footer">
+          <button class="btn-clear" onclick="clearFilters('card-request')">Clear Filters</button>
+          <button class="btn-apply" onclick="applyFilters('card-request')">Apply &nbsp;✓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CHANGE ────────────────────────────────────────────── -->
+    <div class="entity-filter-card" id="card-change">
+      <div class="entity-header" onclick="toggleCard('card-change')">
+        <span class="entity-phase-dot phase-transactional"></span>
+        <span class="entity-name">change</span>
+        <span class="filter-badge none">
+          <i class="fa-solid fa-filter"></i> No Filter &nbsp;▾
+        </span>
+        <i class="fa-solid fa-chevron-down chevron"></i>
+      </div>
+      <div class="filter-panel">
+
+        <div class="filter-row">
+          <span class="filter-label">Status</span>
+          <div class="filter-options">
+            <span class="toggle-chip" onclick="toggleChip(this)">Open</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">In Progress</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Completed</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Cancelled</span>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-label">Type</span>
+          <div class="filter-options">
+            <span class="toggle-chip" onclick="toggleChip(this)">All</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Normal</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Emergency</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Standard</span>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-label">Risk</span>
+          <div class="filter-options">
+            <select class="filter-select">
+              <option value="">All Risk Levels</option>
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-panel-footer">
+          <button class="btn-clear">Clear Filters</button>
+          <button class="btn-apply">Apply &nbsp;✓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PROJECT ───────────────────────────────────────────── -->
+    <div class="entity-filter-card" id="card-project">
+      <div class="entity-header" onclick="toggleCard('card-project')">
+        <span class="entity-phase-dot phase-transactional"></span>
+        <span class="entity-name">project</span>
+        <span class="filter-badge none">
+          <i class="fa-solid fa-filter"></i> No Filter &nbsp;▾
+        </span>
+        <i class="fa-solid fa-chevron-down chevron"></i>
+      </div>
+      <div class="filter-panel">
+
+        <div class="filter-row">
+          <span class="filter-label">Status</span>
+          <div class="filter-options">
+            <span class="toggle-chip" onclick="toggleChip(this)">Pre-release</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Open</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">In Progress</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Completed</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Closed</span>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-label">Type</span>
+          <div class="filter-options">
+            <select class="filter-select">
+              <option value="">All Project Types</option>
+              <option>Internal</option>
+              <option>Client</option>
+              <option>Infrastructure</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-panel-footer">
+          <button class="btn-clear">Clear Filters</button>
+          <button class="btn-apply">Apply &nbsp;✓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PROBLEM ───────────────────────────────────────────── -->
+    <div class="entity-filter-card" id="card-problem">
+      <div class="entity-header" onclick="toggleCard('card-problem')">
+        <span class="entity-phase-dot phase-transactional"></span>
+        <span class="entity-name">problem</span>
+        <span class="filter-badge none">
+          <i class="fa-solid fa-filter"></i> No Filter &nbsp;▾
+        </span>
+        <i class="fa-solid fa-chevron-down chevron"></i>
+      </div>
+      <div class="filter-panel">
+
+        <div class="filter-row">
+          <span class="filter-label">Status</span>
+          <div class="filter-options">
+            <span class="toggle-chip" onclick="toggleChip(this)">Open</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Analysing</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Resolved</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Closed</span>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-label">Priority</span>
+          <div class="filter-options">
+            <span class="toggle-chip" onclick="toggleChip(this)">All</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">High</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Medium</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Low</span>
+          </div>
+        </div>
+
+        <div class="filter-panel-footer">
+          <button class="btn-clear">Clear Filters</button>
+          <button class="btn-apply">Apply &nbsp;✓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CONTRACT ──────────────────────────────────────────── -->
+    <div class="entity-filter-card" id="card-contract">
+      <div class="entity-header" onclick="toggleCard('card-contract')">
+        <span class="entity-phase-dot phase-transactional"></span>
+        <span class="entity-name">contract</span>
+        <span class="filter-badge none">
+          <i class="fa-solid fa-filter"></i> No Filter &nbsp;▾
+        </span>
+        <i class="fa-solid fa-chevron-down chevron"></i>
+      </div>
+      <div class="filter-panel">
+
+        <div class="filter-row">
+          <span class="filter-label">Status</span>
+          <div class="filter-options">
+            <span class="toggle-chip" onclick="toggleChip(this)">Active</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Expired</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Upcoming</span>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-label">Type</span>
+          <div class="filter-options">
+            <select class="filter-select">
+              <option value="">All Contract Types</option>
+              <option>Maintenance</option>
+              <option>Lease</option>
+              <option>Warranty</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-panel-footer">
+          <button class="btn-clear">Clear Filters</button>
+          <button class="btn-apply">Apply &nbsp;✓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PURCHASE ORDER ────────────────────────────────────── -->
+    <div class="entity-filter-card" id="card-po">
+      <div class="entity-header" onclick="toggleCard('card-po')">
+        <span class="entity-phase-dot phase-transactional"></span>
+        <span class="entity-name">purchase_order</span>
+        <span class="filter-badge none">
+          <i class="fa-solid fa-filter"></i> No Filter &nbsp;▾
+        </span>
+        <i class="fa-solid fa-chevron-down chevron"></i>
+      </div>
+      <div class="filter-panel">
+
+        <div class="filter-row">
+          <span class="filter-label">Status</span>
+          <div class="filter-options">
+            <span class="toggle-chip" onclick="toggleChip(this)">Draft</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Ordered</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Received</span>
+            <span class="toggle-chip" onclick="toggleChip(this)">Closed</span>
+          </div>
+        </div>
+
+        <div class="filter-panel-footer">
+          <button class="btn-clear">Clear Filters</button>
+          <button class="btn-apply">Apply &nbsp;✓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM ACTIONS -->
+    <div class="bottom-bar">
+      <button class="btn-back">← Back</button>
+      <span class="filter-summary-text">
+        <strong>1</strong> of 6 entities have active filters
+      </span>
+      <button class="btn-next">Next →</button>
+    </div>
+
+    <!-- ── PROGRESS PAGE PREVIEW ─────────────────────────────── -->
+    <div class="preview-section">
+      <div class="preview-title">Preview — How filters appear on the Migration Progress page</div>
+      <div class="preview-card">
+        <table class="preview-table">
+          <thead>
+            <tr>
+              <th>Entity</th>
+              <th>Status</th>
+              <th>Total</th>
+              <th>Migrated</th>
+              <th>Failed</th>
+              <th>Active Filters</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <span class="entity-dot-small dot-blue"></span>department
+              </td>
+              <td><span class="status-badge status-completed">✓ Completed</span></td>
+              <td>24</td><td>24</td><td>0</td>
+              <td><span style="font-size:12px;color:#9ca3af;">—</span></td>
+              <td>0:04s</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="entity-dot-small dot-blue"></span>priority
+              </td>
+              <td><span class="status-badge status-completed">✓ Completed</span></td>
+              <td>6</td><td>6</td><td>0</td>
+              <td><span style="font-size:12px;color:#9ca3af;">—</span></td>
+              <td>0:01s</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="entity-dot-small dot-orange"></span>request
+              </td>
+              <td><span class="status-badge status-inprogress">⟳ In Progress</span></td>
+              <td>412</td><td>142</td><td>0</td>
+              <td>
+                <div class="filter-chips-cell">
+                  <span class="filter-chip-small">Status: Open, In Progress</span>
+                  <span class="filter-chip-small">Priority: High</span>
+                </div>
+              </td>
+              <td>1:22s</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="entity-dot-small dot-orange"></span>change
+              </td>
+              <td><span class="status-badge status-waiting">○ Waiting</span></td>
+              <td>—</td><td>—</td><td>—</td>
+              <td><span style="font-size:12px;color:#9ca3af;">No filter</span></td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="entity-dot-small dot-orange"></span>project
+              </td>
+              <td><span class="status-badge status-waiting">○ Waiting</span></td>
+              <td>—</td><td>—</td><td>—</td>
+              <td><span style="font-size:12px;color:#9ca3af;">No filter</span></td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  function toggleCard(id) {
+    const card = document.getElementById(id);
+    card.classList.toggle('open');
+  }
+
+  function toggleChip(el) {
+    el.classList.toggle('selected');
+  }
+
+  function clearFilters(id) {
+    const card = document.getElementById(id);
+    card.querySelectorAll('.toggle-chip').forEach(c => c.classList.remove('selected'));
+    card.querySelectorAll('.filter-select').forEach(s => s.selectedIndex = 0);
+    const badge = card.querySelector('.filter-badge');
+    badge.className = 'filter-badge none';
+    badge.innerHTML = '<i class="fa-solid fa-filter"></i> No Filter &nbsp;▾';
+    const chips = card.querySelector('.filter-summary-chips');
+    if (chips) chips.innerHTML = '';
+  }
+
+  function applyFilters(id) {
+    const card = document.getElementById(id);
+    const selected = [...card.querySelectorAll('.toggle-chip.selected')].map(c => c.textContent.trim());
+    const badge = card.querySelector('.filter-badge');
+    if (selected.length > 0) {
+      badge.className = 'filter-badge active';
+      badge.innerHTML = '<i class="fa-solid fa-check"></i> Filter Active';
+    } else {
+      badge.className = 'filter-badge none';
+      badge.innerHTML = '<i class="fa-solid fa-filter"></i> No Filter &nbsp;▾';
+    }
+    card.classList.remove('open');
+  }
+</script>
+</body>
+</html>
