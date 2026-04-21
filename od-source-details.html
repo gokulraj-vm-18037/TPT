@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>OD Migration — Source Details</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { font-family: 'Inter', sans-serif; background: #f4f4f6; color: #1a1a1a; min-height: 100vh; }
+
+    /* ── NAV ── */
+    .topnav { background: #00096f; height: 54px; display: flex; align-items: center; padding: 0 28px; position: sticky; top: 0; z-index: 100; }
+    .topnav-logo { color: #fff; font-size: 20px; font-weight: 700; }
+
+    /* ── LAYOUT ── */
+    .layout { display: flex; min-height: calc(100vh - 54px); }
+
+    /* ── SIDEBAR ── */
+    .sidebar { width: 220px; background: #f0f0f0; flex-shrink: 0; display: flex; flex-direction: column; }
+    .sidebar-step { padding: 13px 18px; font-size: 13px; color: #333; border-left: 3px solid transparent; cursor: default; }
+    .sidebar-step.active { background: #00096f; color: #fff; border-left-color: #4a7fe8; font-weight: 500; }
+    .sidebar-meta { padding: 20px 14px 8px; border-top: 1px solid #ddd; margin-top: 12px; }
+    .sidebar-meta-label { font-size: 10px; font-weight: 600; color: #888; letter-spacing: 0.8px; text-transform: uppercase; }
+    .sidebar-meta-value { font-size: 13px; font-weight: 500; color: #00096f; margin-top: 3px; }
+    .logout-wrap { margin-top: auto; padding: 20px 14px; }
+    .logout-btn {
+      width: 120px; padding: 9px 14px; border-radius: 4px; cursor: pointer;
+      background: #f7f7f7; border: 1px solid #ce0004; color: #ce0004; font-size: 13px;
+      font-family: inherit; display: flex; align-items: center; gap: 8px;
+    }
+
+    /* ── MAIN ── */
+    .main { flex: 1; padding: 32px 40px; overflow-y: auto; }
+
+    /* ── CARD ── */
+    .card {
+      background: #fff; border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+      max-width: 660px; overflow: hidden;
+    }
+    .card-header {
+      padding: 10px 20px 12px;
+      border-bottom: 1px solid #eee;
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    .card-header-label { font-size: 11px; color: #aaa; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-right: 4px; }
+    .card-header-title { font-size: 22px; font-weight: 600; color: #00096f; white-space: nowrap; }
+    .product-select {
+      font-size: 15px; padding: 6px 30px 6px 10px; border: 1px solid #ccc;
+      border-radius: 4px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E") no-repeat right 10px center;
+      appearance: none; color: #111; font-family: inherit; cursor: pointer;
+    }
+
+    /* ── FORM ROWS ── */
+    .form-section { padding: 8px 0; }
+    .form-row {
+      display: flex; align-items: center; padding: 11px 20px; gap: 12px; flex-wrap: wrap;
+      position: relative;
+    }
+    .form-label {
+      font-size: 13px; color: #333; width: 148px; flex-shrink: 0;
+    }
+    .req { color: #e00; margin-left: 2px; }
+    .form-input {
+      flex: 1; min-width: 180px; max-width: 340px; padding: 8px 12px;
+      border: 1px solid #ccc; border-radius: 4px; font-size: 14px;
+      font-family: inherit; color: #111; background: #fff;
+    }
+    .form-input:focus { outline: none; border-color: #134CB7; box-shadow: 0 0 0 2px rgba(19,76,183,0.1); }
+    .form-input::placeholder { color: #aaa; font-style: italic; font-size: 13px; }
+    .form-input.readonly { background: #f0f0f0; color: #555; font-style: italic; font-size: 13px; }
+    .form-select {
+      flex: 1; min-width: 180px; max-width: 340px; padding: 8px 30px 8px 10px;
+      border: 1px solid #ccc; border-radius: 4px; font-size: 14px;
+      font-family: inherit; color: #111; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E") no-repeat right 10px center;
+      appearance: none; cursor: pointer;
+    }
+    .form-select:focus { outline: none; border-color: #134CB7; }
+
+    /* password eye */
+    .input-wrap { position: relative; flex: 1; max-width: 340px; }
+    .input-wrap input { width: 100%; padding-right: 36px; }
+    .eye-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #999; cursor: pointer; font-size: 14px; }
+
+    /* redirect URI row */
+    .uri-row { display: flex; gap: 8px; flex: 1; max-width: 340px; align-items: center; }
+    .copy-btn {
+      padding: 8px 12px; border: 1px solid #999; background: #e0e0e0;
+      font-size: 13px; cursor: pointer; border-radius: 3px; white-space: nowrap;
+      font-family: inherit;
+    }
+    .copy-btn:hover { background: #ccc; }
+
+    /* ── CONNECTED BANNER ── */
+    .connected-banner {
+      margin: 0 20px 0; padding: 10px 14px; border-radius: 6px;
+      background: #f0fdf4; border: 1px solid #86efac;
+      display: flex; align-items: center; gap: 10px; font-size: 13px; color: #166534;
+      font-weight: 500;
+    }
+    .connected-banner i { color: #16a34a; }
+
+    /* ── CARD FOOTER ── */
+    .card-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 24px; border-top: 1px dashed #ddd; margin-top: 4px;
+    }
+    .btn-back {
+      padding: 10px 22px; border-radius: 4px; border: 1px solid #ccc;
+      background: rgba(128,128,128,0.12); color: #444; cursor: pointer;
+      font-size: 14px; font-family: inherit;
+    }
+    .btn-next {
+      padding: 10px 26px; border-radius: 4px; border: none;
+      background: #134CB7; color: #fff; cursor: pointer;
+      font-size: 14px; font-family: inherit; font-weight: 500;
+    }
+    .btn-next:hover { background: #0f3a94; }
+    .btn-auth {
+      padding: 10px 22px; border-radius: 4px; border: none;
+      background: #134CB7; color: #fff; cursor: pointer;
+      font-size: 14px; font-family: inherit; font-weight: 500;
+    }
+    .btn-auth:hover { background: #0f3a94; }
+
+    /* ── STEP TABS ── */
+    .step-tabs { display: flex; gap: 24px; margin-bottom: 24px; }
+    .step-tab {
+      font-size: 13px; font-weight: 500; color: #9ca3af;
+      padding-bottom: 6px; border-bottom: 2px solid transparent; cursor: pointer;
+    }
+    .step-tab.active { color: #00096f; border-bottom-color: #134CB7; }
+
+    /* ── NOTE ── */
+    .form-note { font-size: 11px; color: #aaa; padding: 4px 20px 12px; }
+
+    /* ── SECTION SEPARATOR ── */
+    .form-sep { border: none; border-top: 1px solid #eee; margin: 4px 20px; }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="topnav-logo">Migra</span>
+</nav>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-step active">Source Details</div>
+    <div class="sidebar-step">SDP Cloud Auth</div>
+    <div class="sidebar-step">Filter Customization</div>
+    <div class="sidebar-step">Migration Progress</div>
+    <div class="sidebar-meta">
+      <div class="sidebar-meta-label">Migration</div>
+      <div class="sidebar-meta-value">Migration_001</div>
+      <div style="font-size:11px;color:#aaa;margin-top:2px;">MIG-17141234-A1B2</div>
+    </div>
+    <div class="logout-wrap">
+      <button class="logout-btn">Logout <i class="fa-solid fa-arrow-right-from-bracket fa-xs"></i></button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <div class="step-tabs">
+      <span class="step-tab active" onclick="showStage(1, this)">Step 1A &nbsp;—&nbsp; Credentials</span>
+      <span class="step-tab" onclick="showStage(2, this)">Step 1B &nbsp;—&nbsp; Entity Selection</span>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- STAGE A — CREDENTIALS                                      -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div id="stage-a">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-header-label">Source details</span>
+          <span class="card-header-title">Migrate From :</span>
+          <select class="product-select" id="sourceproduct" onchange="handleProductChange(this.value)">
+            <option value="">— Choose Product —</option>
+            <option value="confluence">Confluence</option>
+            <option value="freshdesk">Freshdesk</option>
+            <option value="freshservice">Freshservice</option>
+            <option value="happyfox">HappyFox</option>
+            <option value="jira">Jira</option>
+            <option value="sdpondemand" selected>SDP OnDemand</option>
+            <option value="zendesk">Zendesk</option>
+            <option value="zohodesk">ZohoDesk</option>
+          </select>
+        </div>
+
+        <div class="form-section">
+          <!-- Accounts URL -->
+          <div class="form-row">
+            <label class="form-label">Accounts URL <span class="req">*</span></label>
+            <select class="form-select">
+              <option>accounts.zoho.com</option>
+              <option>accounts.zoho.eu</option>
+              <option>accounts.zoho.com.au</option>
+              <option>accounts.zoho.in</option>
+              <option>accounts.zohocloud.ca</option>
+            </select>
+          </div>
+
+          <!-- Domain URL -->
+          <div class="form-row">
+            <label class="form-label">Domain URL <span class="req">*</span></label>
+            <input class="form-input" type="text" placeholder="https://yourcompany.sdpondemand.com"/>
+          </div>
+
+          <!-- Client ID -->
+          <div class="form-row">
+            <label class="form-label">Client ID <span class="req">*</span></label>
+            <input class="form-input" type="text" placeholder="Enter Client ID"/>
+          </div>
+
+          <!-- Client Secret -->
+          <div class="form-row">
+            <label class="form-label">Client Secret <span class="req">*</span></label>
+            <div class="input-wrap">
+              <input class="form-input" type="password" id="clientSecret" placeholder="Enter Client Secret" style="max-width:100%;"/>
+              <i class="fa-regular fa-eye eye-icon" onclick="togglePwd('clientSecret', this)"></i>
+            </div>
+          </div>
+
+          <!-- Redirect URI -->
+          <div class="form-row">
+            <label class="form-label">Redirect URI</label>
+            <div class="uri-row">
+              <input class="form-input readonly" type="text" readonly value="http://localhost:8080/migration/od-callback" style="font-size:12px;"/>
+              <button class="copy-btn" onclick="copyUri(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <button class="btn-back">Start Over</button>
+          <button class="btn-auth" onclick="simulateAuth()">Authorize Source &nbsp;→</button>
+        </div>
+      </div>
+    </div><!-- /stage-a -->
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- STAGE B — ENTITY SELECTION                                  -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div id="stage-b" style="display:none;">
+      <div class="card" style="max-width: 940px;">
+
+        <!-- Connected banner -->
+        <div style="padding: 14px 20px 0;">
+          <div class="connected-banner">
+            <i class="fa-solid fa-circle-check"></i>
+            Connected: <strong>Demo Corp</strong>&nbsp;(demo.sdpondemand.com)
+          </div>
+        </div>
+
+        <div class="card-header" style="margin-top:12px;">
+          <span style="font-size:15px;font-weight:600;color:#111;">Select Entities to Migrate</span>
+        </div>
+
+        <!-- Transfer widget -->
+        <div style="display:flex;gap:0;padding:0 20px 16px;align-items:flex-start;">
+
+          <!-- LEFT PANEL -->
+          <div style="flex:1;">
+            <div style="display:flex;flex-direction:column;border:1px solid #ddd;border-radius:6px;overflow:hidden;height:370px;">
+              <!-- Panel header -->
+              <div style="background:#f3f4f6;padding:9px 14px;font-size:11px;font-weight:600;color:#6b7280;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;flex-shrink:0;">
+                AVAILABLE
+              </div>
+              <!-- Search -->
+              <div style="padding:8px 10px;border-bottom:1px solid #f0f0f0;flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:6px;border:1px solid #ddd;border-radius:4px;padding:5px 10px;background:#fafafa;">
+                  <i class="fa-solid fa-magnifying-glass" style="color:#aaa;font-size:11px;"></i>
+                  <input type="text" placeholder="Search entities..." style="border:none;outline:none;font-size:12px;background:transparent;width:100%;font-family:inherit;color:#555;" oninput="filterEntities(this.value)"/>
+                </div>
+              </div>
+              <!-- List -->
+              <div style="overflow-y:auto;flex:1;" id="entity-list">
+                <!-- Admin section -->
+                <div class="section-header" style="background:#eef2ff;padding:6px 14px;font-size:11px;font-weight:600;color:#3730a3;letter-spacing:0.4px;border-bottom:1px solid #e5e7eb;position:sticky;top:0;">
+                  ── Admin Entities (83) ──
+                </div>
+                <div id="admin-rows"></div>
+                <!-- Transactional section -->
+                <div class="section-header" style="background:#fff7ed;padding:6px 14px;font-size:11px;font-weight:600;color:#92400e;letter-spacing:0.4px;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;position:sticky;top:0;">
+                  ── Transactional Entities (11) ──
+                </div>
+                <div id="trans-rows"></div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:#aaa;margin-top:5px;">Click to select &middot; Ctrl+click for multi-select</div>
+          </div>
+
+          <!-- CENTER BUTTONS -->
+          <div style="display:flex;flex-direction:column;gap:10px;padding:0 16px;justify-content:center;height:370px;">
+            <button onclick="addSelected()" style="padding:7px 16px;border-radius:4px;background:#134CB7;color:#fff;border:none;cursor:pointer;font-size:13px;font-family:inherit;font-weight:500;">Add →</button>
+            <button onclick="removeSelected()" style="padding:7px 14px;border-radius:4px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;cursor:pointer;font-size:13px;font-family:inherit;">← Remove</button>
+          </div>
+
+          <!-- RIGHT PANEL -->
+          <div style="flex:1;">
+            <div style="display:flex;flex-direction:column;border:1px solid #ddd;border-radius:6px;overflow:hidden;height:370px;">
+              <div style="background:#f3f4f6;padding:9px 14px;font-size:11px;font-weight:600;color:#6b7280;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;flex-shrink:0;">
+                SELECTED &nbsp;<span id="sel-count" style="font-weight:400;color:#9ca3af;">(0)</span>
+                &nbsp;<span style="font-size:10px;color:#aaa;font-weight:400;">in migration order</span>
+              </div>
+              <div style="overflow-y:auto;flex:1;" id="selected-list">
+                <div id="selected-empty" style="display:flex;align-items:center;justify-content:center;height:100%;color:#bbb;font-size:13px;flex-direction:column;gap:8px;">
+                  <i class="fa-solid fa-layer-group" style="font-size:24px;color:#ddd;"></i>
+                  No entities selected
+                </div>
+                <div id="selected-rows"></div>
+              </div>
+            </div>
+            <!-- Legend -->
+            <div style="display:flex;gap:16px;margin-top:5px;font-size:11px;color:#6b7280;align-items:center;">
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#134CB7;margin-right:5px;vertical-align:middle;"></span>Admin</span>
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#e07b00;margin-right:5px;vertical-align:middle;"></span>Transactional</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls row -->
+        <div style="display:flex;align-items:center;padding:0 20px 14px;gap:10px;flex-wrap:wrap;">
+          <button onclick="selectAll()" style="padding:6px 14px;border-radius:4px;border:1px solid #d1d5db;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;">Select All</button>
+          <button onclick="clearAll()" style="padding:6px 14px;border-radius:4px;border:1px solid #d1d5db;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;">Clear All</button>
+          <button onclick="removeSelected()" style="padding:6px 14px;border-radius:4px;border:1px solid #d1d5db;background:#fff;font-size:12px;cursor:pointer;color:#b91c1c;font-family:inherit;">Remove Selected &nbsp;✕</button>
+          <div id="count-badge" style="margin-left:auto;display:none;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:500;padding:4px 12px;border-radius:12px;"></div>
+        </div>
+
+        <!-- Info note -->
+        <div style="margin:0 20px 16px;padding:10px 14px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;font-size:12px;color:#3730a3;display:flex;gap:8px;align-items:flex-start;">
+          <i class="fa-solid fa-circle-info" style="margin-top:1px;flex-shrink:0;"></i>
+          Selecting any transactional entity automatically includes all Admin Entities as prerequisites (shown in grey).
+        </div>
+
+        <hr class="form-sep"/>
+
+        <!-- Date range -->
+        <div class="form-row" style="padding-top:14px;">
+          <label class="form-label" style="color:#374151;font-weight:500;">Date Range</label>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="font-size:12px;color:#6b7280;">From</span>
+            <input type="date" style="padding:7px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;"/>
+            <span style="font-size:12px;color:#6b7280;">To</span>
+            <input type="date" style="padding:7px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;"/>
+          </div>
+        </div>
+        <div class="form-note">Applies to transactional entities only. Leave blank to migrate all records.</div>
+
+        <!-- Attachments -->
+        <div class="form-row" style="padding-top:12px;padding-bottom:16px;">
+          <label class="form-label" style="color:#374151;font-weight:500;">Include Attachments</label>
+          <div style="display:flex;gap:20px;align-items:center;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+              <input type="radio" name="attachments" value="yes" style="accent-color:#134CB7;"> Yes
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+              <input type="radio" name="attachments" value="no" checked style="accent-color:#134CB7;"> No <span style="font-size:11px;color:#aaa;">(default)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <button class="btn-back">Start Over</button>
+          <button class="btn-next">Next &nbsp;→</button>
+        </div>
+      </div>
+    </div><!-- /stage-b -->
+
+  </main>
+</div><!-- /layout -->
+
+<script>
+  // ── Entity data ──────────────────────────────────────────────────────
+  const adminEntities = [
+    "org_role","checklist_item","checklist","region","site","software_type","software_manufacturer",
+    "software_category","software","role","department","udf_field","technician_udf_field","user",
+    "technician","asset_state","product_type","currency","vendor","product","product_vendor_association",
+    "asset_udf_field","workstation_udf_field","support_group","contract_type","contract_udf_fields",
+    "purchase_udf_field","gl_code","cost_center","vendor_service_type","vendor_service",
+    "vendor_service_association","purchase_default_value","po_closure_field","virtual_host",
+    "virtual_machine","workstation","asset","priority","status","worklog_type","task_type",
+    "task_template","task_closure_field","category","urgency","impact","level","mode",
+    "request_closure_code","request_type","question","service_category","incident_udf_field",
+    "service_udf_field","user_group","request_template","reply_template","resolution_template",
+    "priority_matrix","ffr","change_udf_fields","risk","reason_for_change","change_type","cab",
+    "change_stage","change_role","change_status","change_closure_code","change_closure_rule",
+    "change_template","project_permission","project_role","project_type","project_status",
+    "project_udf_fields","project_template","topic","solution_status","backup_approver"
+  ];
+  const transEntities = [
+    "purchase_order","solution","task","request","archive_request",
+    "change","contract","project","projects_to_request_association","problem","pm_task"
+  ];
+
+  let selectedItems = new Set();
+  let availableSelected = new Set();
+  let hasTransactional = false;
+
+  function renderAvailable() {
+    const adminRows = document.getElementById('admin-rows');
+    const transRows = document.getElementById('trans-rows');
+    adminRows.innerHTML = adminEntities.map((e,i) => `
+      <div class="entity-row" data-name="${e}" data-type="admin"
+        style="display:flex;align-items:center;padding:7px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f5f5f5;background:${i%2===0?'#fff':'#fafafa'};"
+        onclick="toggleAvail(this)" ondblclick="addSingle('${e}','admin')">
+        <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#134CB7;margin-right:9px;flex-shrink:0;"></span>
+        ${e}
+        <span class="plus-btn" style="margin-left:auto;color:#ccc;font-size:14px;font-weight:600;display:none;" onclick="event.stopPropagation();addSingle('${e}','admin')">+</span>
+      </div>`).join('') +
+      transEntities.map((e,i) => `
+      <div class="entity-row" data-name="${e}" data-type="trans"
+        style="display:flex;align-items:center;padding:7px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f5f5f5;background:${i%2===0?'#fff':'#fafafa'};"
+        onclick="toggleAvail(this)" ondblclick="addSingle('${e}','trans')">
+        <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#e07b00;margin-right:9px;flex-shrink:0;"></span>
+        ${e}
+        <span class="plus-btn" style="margin-left:auto;color:#ccc;font-size:14px;font-weight:600;display:none;" onclick="event.stopPropagation();addSingle('${e}','trans')">+</span>
+      </div>`).join('');
+
+    document.querySelectorAll('.entity-row').forEach(r => {
+      r.addEventListener('mouseenter', () => { const b = r.querySelector('.plus-btn'); if(b) b.style.display='block'; });
+      r.addEventListener('mouseleave', () => { const b = r.querySelector('.plus-btn'); if(b) b.style.display='none'; });
+    });
+  }
+
+  function toggleAvail(el) {
+    const name = el.dataset.name;
+    if (availableSelected.has(name)) { availableSelected.delete(name); el.style.background=''; el.style.color=''; }
+    else { availableSelected.add(name); el.style.background='#134CB7'; el.style.color='#fff'; }
+  }
+
+  function addSingle(name, type) { addToSelected([{name, type}]); }
+
+  function addSelected() {
+    const toAdd = [];
+    document.querySelectorAll('.entity-row').forEach(r => {
+      if (availableSelected.has(r.dataset.name)) toAdd.push({name: r.dataset.name, type: r.dataset.type});
+    });
+    availableSelected.clear();
+    document.querySelectorAll('.entity-row').forEach(r => { r.style.background=''; r.style.color=''; });
+    addToSelected(toAdd);
+  }
+
+  function addToSelected(items) {
+    const newTrans = items.some(i => i.type === 'trans');
+    if (newTrans && !hasTransactional) {
+      adminEntities.forEach(e => selectedItems.add({name:e, type:'admin'}));
+      hasTransactional = true;
+    }
+    items.forEach(i => {
+      if (![...selectedItems].some(s => s.name === i.name)) selectedItems.add(i);
+    });
+    renderSelected();
+  }
+
+  function renderSelected() {
+    const rows = document.getElementById('selected-rows');
+    const empty = document.getElementById('selected-empty');
+    const count = document.getElementById('sel-count');
+    const badge = document.getElementById('count-badge');
+    const arr = [...selectedItems];
+    if (arr.length === 0) { empty.style.display='flex'; rows.innerHTML=''; count.textContent='(0)'; badge.style.display='none'; return; }
+    empty.style.display = 'none';
+    const adminCount = arr.filter(i=>i.type==='admin').length;
+    const transCount = arr.filter(i=>i.type==='trans').length;
+    count.textContent = `(${arr.length})`;
+    badge.style.display = 'block';
+    badge.textContent = `${arr.length} selected — ${adminCount} admin + ${transCount} transactional`;
+    rows.innerHTML = arr.map((item,i) => `
+      <div style="display:flex;align-items:center;padding:7px 14px;font-size:12px;border-bottom:1px solid #f5f5f5;background:${i%2===0?'#fff':'#fafafa'};">
+        <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${item.type==='admin'?'#134CB7':'#e07b00'};margin-right:9px;flex-shrink:0;"></span>
+        <span style="${item.type==='admin'?'color:#999;':'color:#111;font-weight:500;'}">${item.name}</span>
+        ${item.type==='admin' ? '<span style="margin-left:auto;font-size:10px;color:#bbb;">prereq</span>' : '<span style="margin-left:auto;color:#b91c1c;cursor:pointer;font-size:12px;" onclick="removeItem(\''+item.name+'\')">✕</span>'}
+      </div>`).join('');
+  }
+
+  function removeItem(name) {
+    selectedItems.forEach(i => { if(i.name===name) selectedItems.delete(i); });
+    const stillTrans = [...selectedItems].some(i=>i.type==='trans');
+    if (!stillTrans) { selectedItems.forEach(i => { if(i.type==='admin') selectedItems.delete(i); }); hasTransactional=false; }
+    renderSelected();
+  }
+
+  function removeSelected() { selectedItems.clear(); hasTransactional=false; renderSelected(); }
+  function selectAll() {
+    adminEntities.forEach(e => selectedItems.add({name:e,type:'admin'}));
+    transEntities.forEach(e => selectedItems.add({name:e,type:'trans'}));
+    hasTransactional = true; renderSelected();
+  }
+  function clearAll() { selectedItems.clear(); hasTransactional=false; renderSelected(); }
+
+  function filterEntities(val) {
+    document.querySelectorAll('.entity-row').forEach(r => {
+      r.style.display = r.dataset.name.includes(val.toLowerCase()) ? 'flex' : 'none';
+    });
+  }
+
+  // ── Stage toggle ──────────────────────────────────────────────────
+  function showStage(n, tabEl) {
+    document.getElementById('stage-a').style.display = n===1 ? 'block' : 'none';
+    document.getElementById('stage-b').style.display = n===2 ? 'block' : 'none';
+    document.querySelectorAll('.step-tab').forEach(t => t.classList.remove('active'));
+    tabEl.classList.add('active');
+  }
+
+  function simulateAuth() { showStage(2, document.querySelectorAll('.step-tab')[1]); }
+
+  function handleProductChange(val) {
+    if (val !== 'sdpondemand') { document.querySelector('.step-tab:last-child').style.display='none'; }
+    else { document.querySelector('.step-tab:last-child').style.display=''; }
+  }
+
+  function copyUri(btn) {
+    const uri = btn.previousElementSibling.value;
+    navigator.clipboard.writeText(uri).then(() => { btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy',1500); });
+  }
+
+  function togglePwd(id, icon) {
+    const inp = document.getElementById(id);
+    if (inp.type==='password') { inp.type='text'; icon.classList.replace('fa-eye','fa-eye-slash'); }
+    else { inp.type='password'; icon.classList.replace('fa-eye-slash','fa-eye'); }
+  }
+
+  renderAvailable();
+</script>
+</body>
+</html>
